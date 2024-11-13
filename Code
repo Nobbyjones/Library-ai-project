@@ -1,0 +1,215 @@
+import tkinter as tk
+from tkinter import messagebox, ttk
+
+# Initialize the in-memory book list
+library = []
+book_id_counter = 1  # to generate unique IDs for each book
+
+# Function definitions for managing the book list
+
+def add_book(title, author, year):
+    global book_id_counter
+    book = {
+        "id": book_id_counter,
+        "title": title,
+        "author": author,
+        "year": year,
+        "is_available": True
+    }
+    library.append(book)
+    book_id_counter += 1
+    display_books(library)
+    clear_input_fields()
+    messagebox.showinfo("Success", "Book added successfully!")
+
+def remove_book(book_id):
+    global library
+    library = [book for book in library if book["id"] != book_id]
+    display_books(library)
+    messagebox.showinfo("Success", "Book removed successfully!")
+
+def update_book(book_id, new_title=None, new_author=None, new_year=None):
+    """Update the book's information only for the fields provided."""
+    for book in library:
+        if book["id"] == book_id:
+            if new_title:
+                book["title"] = new_title
+            if new_author:
+                book["author"] = new_author
+            if new_year:
+                book["year"] = new_year
+            display_books(library)
+            clear_input_fields()
+            messagebox.showinfo("Success", "Book updated successfully!")
+            return
+    messagebox.showerror("Error", "Book not found!")
+
+def search_books(title=None, author=None, year=None):
+    results = library
+    if title:
+        results = [book for book in results if title.lower() in book["title"].lower()]
+    if author:
+        results = [book for book in results if author.lower() in book["author"].lower()]
+    if year:
+        results = [book for book in results if str(year) == str(book["year"])]
+    display_books(results)
+
+def check_out_book(book_id):
+    for book in library:
+        if book["id"] == book_id:
+            if book["is_available"]:
+                book["is_available"] = False
+                display_books(library)
+                messagebox.showinfo("Success", "Book checked out successfully!")
+            else:
+                messagebox.showerror("Error", "Book is already checked out!")
+            return
+
+def check_in_book(book_id):
+    for book in library:
+        if book["id"] == book_id:
+            if not book["is_available"]:
+                book["is_available"] = True
+                display_books(library)
+                messagebox.showinfo("Success", "Book checked in successfully!")
+            else:
+                messagebox.showerror("Error", "Book is already available!")
+            return
+
+def get_all_books():
+    display_books(library)
+
+# Helper Functions
+def clear_input_fields():
+    title_entry.delete(0, tk.END)
+    author_entry.delete(0, tk.END)
+    year_entry.delete(0, tk.END)
+
+def display_books(book_list):
+    book_tree.delete(*book_tree.get_children())
+    for book in book_list:
+        status = "Available" if book["is_available"] else "Checked Out"
+        book_tree.insert("", tk.END, values=(book["id"], book["title"], book["author"], book["year"], status))
+
+# GUI setup
+root = tk.Tk()
+root.title("Library Management System")
+root.configure(bg="#e6f7ff")  # Light blue background
+
+# Input fields for title, author, and year with labels
+tk.Label(root, text="Title", bg="#e6f7ff", fg="#004080").grid(row=0, column=0, padx=5, pady=5)
+title_entry = tk.Entry(root)
+title_entry.grid(row=0, column=1, padx=5, pady=5)
+
+tk.Label(root, text="Author", bg="#e6f7ff", fg="#004080").grid(row=1, column=0, padx=5, pady=5)
+author_entry = tk.Entry(root)
+author_entry.grid(row=1, column=1, padx=5, pady=5)
+
+tk.Label(root, text="Year", bg="#e6f7ff", fg="#004080").grid(row=2, column=0, padx=5, pady=5)
+year_entry = tk.Entry(root)
+year_entry.grid(row=2, column=1, padx=5, pady=5)
+
+# Treeview for displaying the book list
+columns = ("ID", "Title", "Author", "Year", "Status")
+book_tree = ttk.Treeview(root, columns=columns, show="headings")
+for col in columns:
+    book_tree.heading(col, text=col)
+book_tree.grid(row=5, column=0, columnspan=4, padx=5, pady=5)
+
+# Scrollbar for the treeview
+scrollbar = ttk.Scrollbar(root, orient="vertical", command=book_tree.yview)
+book_tree.configure(yscroll=scrollbar.set)
+scrollbar.grid(row=5, column=4, sticky="ns")
+
+# Style configuration for Treeview
+style = ttk.Style()
+style.configure("Treeview", background="#f0faff", foreground="#000080", rowheight=25, fieldbackground="#f0faff")
+style.map("Treeview", background=[("selected", "#add8e6")])
+
+# Button functions to add, remove, update, check in, and check out books
+def on_add_book():
+    title = title_entry.get().strip()
+    author = author_entry.get().strip()
+    year = year_entry.get().strip()
+    if title and author and year.isdigit():
+        add_book(title, author, int(year))
+    elif not title:
+        messagebox.showerror("Error", "Please enter a title.")
+    elif not author:
+        messagebox.showerror("Error", "Please enter a author.")
+    else:
+        messagebox.showerror("Error", "Please enter valid book details.")
+
+def on_remove_book():
+    selected_item = book_tree.selection()
+    if selected_item:
+        book_id = int(book_tree.item(selected_item, "values")[0])
+        remove_book(book_id)
+    else:
+        messagebox.showerror("Error", "Please select a book to remove.")
+
+def on_update_book():
+    selected_item = book_tree.selection()
+    if selected_item:
+        book_id = int(book_tree.item(selected_item, "values")[0])
+        new_title = title_entry.get().strip() or None
+        new_author = author_entry.get().strip() or None
+        new_year = year_entry.get().strip()
+        new_year = int(new_year) if new_year.isdigit() else None
+        update_book(book_id, new_title, new_author, new_year)
+    else:
+        messagebox.showerror("Error", "Please select a book to update.")
+
+def on_search():
+    title = title_entry.get().strip() or None
+    author = author_entry.get().strip() or None
+    year = year_entry.get().strip()
+    year = int(year) if year.isdigit() else None
+    search_books(title, author, year)
+
+def on_check_out():
+    selected_item = book_tree.selection()
+    if selected_item:
+        book_id = int(book_tree.item(selected_item, "values")[0])
+        check_out_book(book_id)
+    else:
+        messagebox.showerror("Error", "Please select a book to check out.")
+
+def on_check_in():
+    selected_item = book_tree.selection()
+    if selected_item:
+        book_id = int(book_tree.item(selected_item, "values")[0])
+        check_in_book(book_id)
+    else:
+        messagebox.showerror("Error", "Please select a book to check in.")
+
+def on_show_all():
+    get_all_books()
+
+# Buttons for operations with color customization
+button_bg = "#0073e6"
+button_fg = "white"
+
+# Primary buttons in the top row
+top_buttons = [
+    ("Add Book", on_add_book),
+    ("Remove Book", on_remove_book),
+    ("Update Book", on_update_book),
+    ("Search", on_search),
+]
+
+for i, (text, command) in enumerate(top_buttons):
+    tk.Button(root, text=text, command=command, bg=button_bg, fg=button_fg).grid(row=3, column=i, padx=5, pady=5)
+
+# Check In, Check Out, and Show All buttons in the next row
+bottom_buttons = [
+    ("Check Out", on_check_out),
+    ("Check In", on_check_in),
+    ("Show All", on_show_all)
+]
+
+for i, (text, command) in enumerate(bottom_buttons):
+    tk.Button(root, text=text, command=command, bg=button_bg, fg=button_fg).grid(row=4, column=i, padx=5, pady=5)
+
+# Start the main event loop
+root.mainloop()
